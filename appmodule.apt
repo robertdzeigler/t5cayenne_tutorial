@@ -1,0 +1,308 @@
+Cliffs Notes
+
+	AppModule is the central point of configuring yours and other people's services for your application. The quickstart adds four methods which demonstrate the key features of building and configuring services:
+
+	* public static bind(ServiceBinder binder)
+
+		* Used to "bind" a service interface to a service implementation: binder.bind(MyService.class,MyServiceImpl.class);
+
+			* Tapestry will auto-build MyServiceImpl, injecting any dependencies into the constructor.
+
+	* public static void contributeApplicationDefaults(Configuration configuration)
+
+		* Contribute methods allow "distributed configuration": any XXXModule can have a "contributeYYY method, where YYY is the
+			name of a service.  Tapestry collects contributions together and provides them as a method parameter to the service constructor.
+
+			* MappedConfiguration : provided as a map to the service constructor
+
+			* OrderedConfiguration : provided as a list to the service constructor
+
+			* Configuration : provided as a collection to the service constructor
+
+		* ApplicationDefaults is a service that provides "symbol" information.  
+
+			* Symbols are runtime variables.  You access them via the SymbolSource service.  
+
+			* SymbolProviders, of which ApplicationDefaults is one, are contributed to the SymbolSource service.
+
+	* public static RequestFilter buildTimingFilter(final Logger log)
+
+		* buildXXX is another way to bind implementations to services involving manual service construction.
+
+		* Required servics can be injected into the buildXXX method.
+
+		* This method builds an instance of RequestFilter named "TimingFilter".
+
+			* RequestFilter is used as part of a request-handling pipeline called RequestHandler.
+
+	* public static void contributeRequestHandler(OrderedConfiguration<RequestFilter> configuration, @Local RequestFilter filter)
+
+		* Another "contribution": adds the timing filter to the RequestHandler configuration, so it will be included as part of the pipeline.
+
+		* @Local tells tapestry to inject the version of RequestFilter contributed by the current module (the TimingFilter built above).
+
+			* Won't work if two services implement the same interface in the same module (eg: two RequestFilter's).
+
+	Next up: the {{{indexpg.html}"Index" page}}. 
+
+Tome
+
+* com.googlecode.tapestry5cayenne.services.AppModule
+
+	T5IOC thinks of code in terms of "modules".  A module is a combination of service interfaces, service implementations, and the service configuration.  In Tapestry IOC, configuration of services occurs via the "XXXMmodule" class, where XXX is the name of the module.  T5IOC examines the methods within the class for those with special meaning.  In the pizzeria application, we have the "AppModule", which is the central module respecting services and application configuration for the pizzeria.  "AppModule" is another instance of Tapestry's "convention over configuration".  Remember back when we were discussing web.xml, and we defined two things: the "tapestry-app.package" context parameter, and the "app" filter? Well, tapestry 5 is going to use a combination of those values to automatically add a module to the T5IOC container for us.  Tapestry will look for "tapestry-app.package".services.<filtername>Module.  Or, for us: com.googlecode.tapestry5cayenne.services.AppModule.  If we had named the filter "pizzeria", then tapestry would look for "com.googlecode.tapestry5cayenne.services.PizzeriaModule". 
+
+	As mentioned, the AppModule is automatically added to the IOC container as a "module". What does this mean? It means that the IOC container will peruse the methods of the class and look for methods that are used to build new services, to "configure" or "contribute to" existing services, or to "decorate" services. Skipping the package definition and imports, let's take a look at the (very simple) AppModule:
+
++----+
+
+/**
+ * This module is automatically included as part of the Tapestry IoC Registry, it's a good place to
+ * configure and extend Tapestry, or to place your own service definitions.
+ */
+public class AppModule
+{
+    public static void bind(ServiceBinder binder)
+    {
+        // binder.bind(MyServiceInterface.class, MyServiceImpl.class);
+        
+        // Make bind() calls on the binder object to define most IoC services.
+        // Use service builder methods (example below) when the implementation
+        // is provided inline, or requires more initialization than simply
+        // invoking the constructor.
+    }
+    
++----+
+
+	The first method we encounter is the "bind" method, which receives a single argument, "binder".  We have to tell the IOC container about the services that we provide.  Essentially, we "register" our services with the IOC container.  Or, more correctly, we "bind" a concrete implementation to an interface, thereby informing informing the IOC container that injection requests for that interface should be handled by our instance.  You may be wondering about conflicts: what happens if a module (or multiple modules) "bind" more than one implementation to the same service? How does tapestry know which one to inject?  There are several ways that this is handled, which we will cover later.  The nice thing about binding in this fashion is that the IOC registry will "autobuild" our services for us.  If we do:
+
++----+
+  binder.bind(Authenticator.class,DefaultAuthenticator.class);
++----+
+
+	Then tapestry will instantiate DefaultAuthenticator for us, including injecting all dependencies that the service needs.  About 99% of all your service "registration" will happen this way.  Tapestry also has a convention here with the service binder.  You can call:
+
++----+
+  binder.bind(MyService.class);
++----+
+
+	And tapestry will find and instantiate the corresponding implementation as long as the following conditions are met: 
+
+	* There must only be one concrete implementation of the interface
+
+	* That implementation must be in the same package as the interface
+
+	* The implementation name must be XXXImpl, as in: MyServiceImpl.class. 
+
+	When we use the "bind" method (either the one or two argument form) with no further modifications, tapestry provides us with a default "service id".  A service id is a unique identifier for a service; it's part of how disambiguation happens when more than one service implements the same interface.  The default id is simply the name of the interface.  So, "binder.bind(MyService.class)" will instantiate MyServiceImpl.class and associate it with the id "MyService".  As an aside, we can explicitly override that id; the "bind" method returns an object suitable for chaining information about the service together:
+
++----+
+	binder.bind(MyService.class).withId("SomeOtherId");
++----+
+
+	Let's move on to the next method in the file.
+    
++----+
+    public static void contributeApplicationDefaults(
+            MappedConfiguration<String, String> configuration)
+    {
+        // Contributions to ApplicationDefaults will override any contributions to
+        // FactoryDefaults (with the same key). Here we're restricting the supported
+        // locales to just "en" (English). As you add localised message catalogs and other assets,
+        // you can extend this list of locales (it's a comma separated series of locale names;
+        // the first locale name is the default when there's no reasonable match).
+        
+        configuration.add(SymbolConstants.SUPPORTED_LOCALES, "en");
+
+        // The factory default is true but during the early stages of an application
+        // overriding to false is a good idea. In addition, this is often overridden
+        // on the command line as -Dtapestry.production-mode=false
+        configuration.add(SymbolConstants.PRODUCTION_MODE, "false");
+    }
+    
++----+
+
+	We have now seen our first "contribution".  Contributions are also known as "distributed configurations".  The idea is fairly simple, but very powerful, and a key component to the extensibility and flexibility of the framework.  The main idea is that many services require some sort of "configuration"; information that it requires at runtime.  There are many possible types of configuration information: one service might need a list of files from which to look up information.  Another service might connect to a database, and so need connection information (database url, login credentials, driver to use, etc.).  A service which creates reports might need a list of /other/ services that are capable of exporting reports, and so on.  The important thing is that there is some information needed by a service which is only available at runtime, or at least at application installation time.  Tapestry's approach to handling this configuration is "contributions".  A service which requires configuration information can have a constructor parameter (usually the first parameter) of one of the three following types:
+
+	* Collection
+
+		* Signifies that the configuration type is "Configuration".  That is, the values contributed in are "added" to the configuration/collection in no particular order.
+
+	* List
+
+		* Signifies that the configuration type is "OrderedConfiguration": values are contributed and ordering constraints may be specified to ensure proper ordering.  This is useful when, for example, constructing a pipeline of services; you want to be able to make sure that the pipeline is constructed in the proper order.
+
+	* Map
+
+		* Signifies that the configuration type is "MappedConfiguration".
+
+	This parameter clues tapestry in that the service needs configuration information.  The T5IOC container will look for matching "contribution" methods in every module that it knows about.  Currently, T5IOC determines which methods are "contributions" based on a naming convention:
+
++-----+
+contributeXXX
++----+
+
+	Where XXX is the service id of the service we wish to configure.  We're "contributing" /to/ service "XXX". So in the contribution method above, we're contributing configuration information to the "ApplicationDefaults" service.  We've contributed the "SUPPORTED_LOCALES" symbol, with a value of "en", meaning that our application only supports english (this affects how tapestry handles localization; it will only attempt localization for "supported locales").  We've also defined "PRODUCTION_MODE" as "false".  Tapestry can operate in or out of production mode.  Out of production mode is normally what you want for development; Tapestry has excellent error reporting, but if "PRODUCTION_MODE" is true, the error reporting is suppressed, among other differences. So, now what? We haven't actually "touched" the ApplicationDefaults service; we've called some methods on an object of type "MappedConfiguration".  Here's where the "distributed configuration" part comes in.  Tapestry will find your method and execute it, and it will also find all other "contributeApplicationDefaults" methods in all other modules available to it and execute /them/.  It will then transform the MappedConfiguration into a map, which it makes available when buildilng the ApplicationDefaults service.  Here are the important snippets from org.apache.tapestry5.ioc.TapestryIOCModule and org.apache.tapestry5.ioc.internal.services.MapSymbolProvider:
+
++----+
+public final class TapestryIOCModule
+{
+    public static void bind(ServiceBinder binder)
+    {
+		...
+ 		binder.bind(SymbolProvider.class, MapSymbolProvider.class).withId("ApplicationDefaults")
+        .withMarker(ApplicationDefaults.class);
+		...
+	}
+	...
+}
++----+
+
+	and
+
++----+
+...
+public class MapSymbolProvider implements SymbolProvider
+{
+    private final Map<String, String> configuration;
+
+    public MapSymbolProvider(final Map<String, String> configuration)
+    {
+        this.configuration = configuration;
+    }
+    ...
+}
++----+
+
+	Note that Tapestry's IOC module binds the implementation of "MapSymbolProvider" to the interface "SymbolProvider", providing an explicit id "ApplicationDefaults" (it also sets a "marker annotation" which we haven't discussed before; in short, marker annotations are a typesafe way to disambiguate between services that implement the same service interface).  The container auto-builds the object, passing in the map, pieced together from the various "contributeApplicationDefaults" methods), to the MapSymbolProvider constructor.  And voila, a service is born!  Now, here's where contributions start to get really cool: services can be used as contributions to other services.  And that's exactly what happens with ApplicationDefaults.  In a real tapestry application, we will pretty much never ask for the ApplicationDefaults service to be injected.  Instead, we'll ask for the "SymbolSource" service.  Symbols can be constructed from other symbols (directly analogous to constructing a file path like "$directory/$file" in perl or php).  The symbol source service adds the recursive parsing of symbols necessary for symbols to be fully resolved when you need them.  But where does SymbolSource get the symbols from in the first place? From contributions, of course!  Check out this segment of the TapestryIOCModule:
+
++----+
+    public static void contributeSymbolSource(OrderedConfiguration<SymbolProvider> configuration,
+                                              @ApplicationDefaults SymbolProvider applicationDefaults,
+
+                                              @FactoryDefaults SymbolProvider factoryDefaults)
+    {
+        configuration.add("SystemProperties", new SystemPropertiesSymbolProvider(), "before:*");
+        configuration.add("ApplicationDefaults", applicationDefaults, "after:SystemProperties");
+        configuration.add("FactoryDefaults", factoryDefaults, "after:ApplicationDefaults");
+    }
+
++----+
+
+	The IOC modul is contributing to the "SymbolSource" service.  Note that the configuration here is an OrderedConfiguration of SymbolProvider.  This method also introduces another concept: services that you need to do your contributing can be injected into the contribute methods.  Here, the IOCModule is asking the container to inject two symbol providers, one marked with the @ApplicationDefaults annotation (remember the "withMarker" bit above?), and the other marked with the FactoryDefaults annotation.  It then adds a SystemPropertiesSymbolProvider, the application defaults, and the factory defaults providers to the configuration.  Note that this is an "ordered configuration", and the module specifies the constraints: SystemProperties is before everything, ApplicationDefaults is after SystemProperties, and FactoryDefaults is after ApplicationDefaults.  Now when the implementation of SymbolSource checks for a symbol, it will look first in SystemProperties, and then in ApplicationDefaults, and finally in FactoryDefaults.  This allows modules to supply their own symbols with suitable defaults (via contributeFactoryDefaults), but still allow applications to override those defaults (via system properties or a contribution to application defaults or some combination).  It doesn't stop there, though.  Suppose you wanted to store symbols in a properties file.  You could write your very own "SymbolProvider" implementation, say, PropertiesFileSymbolProvider.  And then you could do something like:
+
++----+
+public static void contributeSymbolSource(OrderedConfiguration<SymbolProvider> configuration, @Local SymbolProvider propertiesFiles) {
+	configuration.add("PropertiesFile", propertiesFiles, "before:ApplicationDefaults");
+}
++----+
+
+	We've just extended the behavior of the SymbolSource service by contributing our own SymbolProvider service! (That @Local annotation tells tapestry to inject the service implementation of the interface that "belongs" to the same module as the contribution.  As long as the "PropertiesFileSymbolProvider" was the only class that our custom module provides that implements SymbolProvider, @Local will work just fine; if we have multiple custom SymbolProviders (say, one for properties files and one for database-backed properties), then we would need to have a more specific way to disambiguate those services, either via service id or some marker annotation).  Now, properties specified in the properties file or files used by your custom SymbolProvider will take precedence over contributions to ApplicationDefaults, but those properties can still be overridden via system properties.  Take some time to review these examples; contributions are a crucially important part of tapestry IOC and the tapestry web application framework.  Once it "clicks", you will be using them all over the place for your own services, as well.  Ok, I hear you, you're saying, alright, already, can we move on now? Let's start writing this application already! I know, I know, we'll get there. Be patient; we have to lay the foundation right, or the rest of the application will make no sense.  So, bear with me, and let's move on to the next part of the AppModule:
+
++----+
+    /**
+     * This is a service definition, the service will be named "TimingFilter". The interface,
+     * RequestFilter, is used within the RequestHandler service pipeline, which is built from the
+     * RequestHandler service configuration. Tapestry IoC is responsible for passing in an
+     * appropriate Logger instance. Requests for static resources are handled at a higher level, so
+     * this filter will only be invoked for Tapestry related requests.
+     * 
+     * <p>
+     * Service builder methods are useful when the implementation is inline as an inner class
+     * (as here) or require some other kind of special initialization. In most cases,
+     * use the static bind() method instead. 
+     * 
+     * <p>
+     * If this method was named "build", then the service id would be taken from the 
+     * service interface and would be "RequestFilter".  Since Tapestry already defines
+     * a service named "RequestFilter" we use an explicit service id that we can reference
+     * inside the contribution method.
+     */    
+    public RequestFilter buildTimingFilter(final Logger log)
+    {
+        return new RequestFilter()
+        {
+            public boolean service(Request request, Response response, RequestHandler handler)
+                    throws IOException
+            {
+                long startTime = System.currentTimeMillis();
+
+                try
+                {
+                    // The responsibility of a filter is to invoke the corresponding method
+                    // in the handler. When you chain multiple filters together, each filter
+                    // received a handler that is a bridge to the next filter.
+                    
+                    return handler.service(request, response);
+                }
+                finally
+                {
+                    long elapsed = System.currentTimeMillis() - startTime;
+
+                    log.info(String.format("Request time: %d ms", elapsed));
+                }
+            }
+        };
+    }
++----+
+
+	This example shows an alternate way to build a service.  Although about 99% of your service-building will be done via the "bind" method above, it is sometimes convient or necessary to use a "builder method".  These methods look like buildXXX were XXX is the service id of the service you are building (if the method will have a unique signature, and if the interface name will provide a unique serviceid, you can shorten this to just "build", and tapestry will use the return type to assign a default service id, as per "bind"; in this case, there are multiple RequestFilters, so we have to explicitly specify the serviceid via the method name).  So in this example, we will build a "RequestFilter" called "timing filter".  Tapestry uses a pipeline of "RequestFilters" to allow customization of how the request and response are handled.  This is directly analogous to using ServletFilters.  Except your request filters have full access to the gamut of services that tapestry makes available.  This particular "RequestFilter" records the current time, passes control onto the next filter in the pipeline (via handler.service), and, finally, calculates the elapsed time from the current time and the previously recorded start time, logging the elapsed time for posterity's sake. Not the most spectacular filter in the world, but it's a nice first pass for looking at processing time of requests.  So, T5IOC, on finding this method, will use it to construct a new RequestFilter service with id "TimingFilter".  Great... now what? Time for another contribution!
+
++----+
+    /**
+     * This is a contribution to the RequestHandler service configuration. This is how we extend
+     * Tapestry using the timing filter. A common use for this kind of filter is transaction
+     * management or security. The @Local annotation selects the desired service by type, but only
+     * from the same module.  Without @Local, there would be an error due to the other service(s)
+     * that implement RequestFilter (defined in other modules).
+     */
+    public void contributeRequestHandler(OrderedConfiguration<RequestFilter> configuration,
+            @Local
+            RequestFilter filter)
+    {
+        // Each contribution to an ordered configuration has a name, When necessary, you may
+        // set constraints to precisely control the invocation order of the contributed filter
+        // within the pipeline.
+        
+        configuration.add("Timing", filter);
+    }
+}
++----+
+
+	Here we're contributing to the "RequestHandler" service; I mentioend before that this service is really a pipeline of "RequestFilter" services.  So we inject the "Local" RequestFilter (we've only built one RequestFilter, so we can use "Local", and the filter injected will be the TimingFilter that we built above) and add it to the pipeline.  Probably, this filter should be the first filter in the pipeline to ensure proper timing data, so we could tweak the configuration to be:
+
++----+
+	configuration.add("Timing", filter, "before:*");
++----+
+
+	But in any case, the idea is conveyed.  Note that the TimingFilter implementation is relatively simple; we could have dispensed with the "build" method and the injection of the RequestFilter into contributeRequestHandler and just written something like:
+
++----+
+	public void contributeRequestHandler(OrderedConfiguration<RequestFilter> configuration) {
+		configuration.add("Timing", new RequestFilter() {
+            public boolean service(Request request, Response response, RequestHandler handler)
+                    throws IOException
+            {
+                long startTime = System.currentTimeMillis();
+
+                try
+                {
+                    // The responsibility of a filter is to invoke the corresponding method
+                    // in the handler. When you chain multiple filters together, each filter
+                    // received a handler that is a bridge to the next filter.
+                    
+                    return handler.service(request, response);
+                }
+                finally
+                {
+                    long elapsed = System.currentTimeMillis() - startTime;
+
+                    log.info(String.format("Request time: %d ms", elapsed));
+                }
+            }
+		});
+	}
++----+
+
+	And that would work just as well for this simple case.  But the AppModule as written illustrates what you would do in the event that things weren't so simple.
+
+	Phew! All of that discussion for just four methods!  But with the basics of IOC and the specifics of much of T5IOC out of the way, we can now move on to discussing the {{{indexpg.html}Index page}}.

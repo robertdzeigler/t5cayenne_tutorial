@@ -1,0 +1,72 @@
+Understanding Webapp Files
+
+Cliff Notes
+
+	* src/main/webapp/WEB-INF/web.xml - config file which configures:
+
+		[[1]] The "tapestry.app-package" (set to com.googlecode.tapestry5cayenne); this is used to resolved key pieces of our application
+
+		[[2]] The name of the "filter" (app) that starts the tapestry-based processing; this is also used for resolving key pieces of our application
+
+	* src/main/webapp/WEB-INF/app.properties
+
+		* name is <filtername>.properties (our filter name is app)
+
+		* Contains translated messages available almost anywhere in the application
+
+  Move on to {{resources.html}}.
+
+Tome
+
+* web.xml
+
+	Recall that the quickstart archetype put four files and one directory below webapp: Index.tml, favicon.ico, the WEB-INF folder, and the WEB-INF/app.properties and WEB-INF/web.xml files. We're going to punt on Index.tml for now, because that discussion really belongs with a discussion of tapestry pages.  Suffice it to say that Index.tml provides much of the html content and structure for the application's index page.  
+
+	The WEB-INF/web.xml file is a standard configuration file for java web applications; every java web application, regardless of the framework (struts, struts2, wicket, tapestry, click, etc.) has a web.xml file.  Let's step through the key elements of this file.
+
++----+
+<!DOCTYPE web-app
+        PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+        "http://java.sun.com/dtd/web-app_2_3.dtd">
+<web-app>
+    <display-name>pizzeria Tapestry 5 Application</display-name>
+    <context-param>
+        <!-- The only significant configuration for Tapestry 5, this informs Tapestry
+of where to look for pages, components and mixins. -->
+        <param-name>tapestry.app-package</param-name>
+        <param-value>com.googlecode.tapestry5cayenne</param-value>
+    </context-param>
+    <filter>
+        <filter-name>app</filter-name>
+        <filter-class>org.apache.tapestry5.TapestryFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>app</filter-name>
+        <url-pattern>/*</url-pattern>
+    </filter-mapping>
+</web-app>
++----+
+
+	The doctype delcares the document type of the xml document.  Here, we're using the web application doctype, version 2.3, provided by sun.  The "display-name" tag provides information to the "servlet container" (such as jetty or tomcat).  A servlet container is an application which runs your java web-application.  Jetty, for instance, uses the display-name to build a list of applications available for perusal.
+
+	The "context-param" element defines variables that will be available to key pieces of a java web application, the "servlets" and "servlet-filters".  We won't be talking much about servlets or servlet-filters because T5 generally hides those details from us.  But essentially, a servlet is a piece of code that responds to "get" and "post" requests, much like a perl cgi-script.  A servlet filter is a piece of code that can be "wrapped" around a servlet (or used without a servlet) which likewise responds to get and post requests.  Servlet filters are chained together to form a pipeline responding to requests.  Tapestry 5 is implemented as a servlet filter: it monitors requests coming in and attempts to handle those requests.  The information in the context-param blocks is available to tapestry at runtime.  We here provide the only realy web.xml-based configuration that T5 needs: the "app-package".  This is similar to the "rootPackage" that the component report plugin uses: it tells tapestry where to start looking for pages, components, mixins, and services.  In this case, our app-package is com.googlecode.tapestry5cayenne.
+
+	The "filter" definition declares a servlet filter that can be applied to different url patterns.  Take note of the value of the filter-name element, "app" by default.  This name will be used by tapestry when it looks for various resources (more details later).  It is also used by the web.xml configuration in the filter-mapping section.  Where "filter" declares a filter (it's name and implementation class), filter-mapping is used to specify which url patterns a particular filter is used for.  Filters are applied to urls in the order in which their mapping elements are specified in the web.xml file. We aren't adding any extra filters, and we won't be for this application, but it's usually a good idea to have tapestry be the last applicable filter to the global pattern space /* (all requests). 
+
+* Global Properties File 
+
+	Tapestry provides excellent internationalization and localization support.  That means it's relatively simple to serve up content appropriate to the language of the user, so if your user is from France, you can give them a French weclome page, and if they're from America, you can give them a welcome page in English.  This works, in part, by the use of "property files" that contain mappings from a "key" to the locale-specific version of that key.  For example, an English properties file might contain:
+
++----+
+welcome_msg=Hello!
++----+
+
+	Whereas the corresponding file for Japanese users might look like:
+
++----+
+welcome_msg=Irasshaimase
++----+
+
+	(Japanese readers: please forgive the poor romanization).  We'll talk more about localization later, but one such property file is the "global message catalog", located in WEB-INF.  It is always named <tapestryfiltername>.properties.  In our case, the tapestry filter name is "app", so the catalog is app.properties.  This messages defined in this catalog will be available to all pages and components in the system. 
+
+	Now that we've explored the files in webapp, let's look at {{{resources.html}resources}}.

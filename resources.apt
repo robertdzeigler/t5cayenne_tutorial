@@ -1,0 +1,15 @@
+Cliffs Notes
+
+	* src/main/resources/log4j.properties
+
+		* logging configuration; quickstart uses log4j by default
+
+	{{{app_structure.html}Application Structure of a T5 webapp}}.
+
+Tome
+
+* Resources Files
+
+	The only file currently under "resources" is "log4j.properties".  However, we will come back to resources to store our "component templates" (more on those later).  Internally, tapestry codes to the {{{http://www.slf4j.org/}sl4j}} logging interfaces.  In theory, you could then use whatever logging api ({{{http://logging.apache.org/log4j/1.2/index.html}log4j}}, {{{http://logback.qos.ch/}logback}}, {{{http://java.sun.com/j2se/1.4.2/docs/api/java/util/logging/package-summary.html}java.util.logging}}) you desire.  The quickstart archetype, however, uses log4j.  The mode of configuring logging is therefore a configuration file, typically a "properties file" (key=value).  Thus, log4j.properties is the logging configuration file where we can turn logging on or off for the application as a whole or any piece of the application, specifically.  If you haven't used good logging software before, I recommend checking out either {{{http://logging.apache.org/log4j/1.2/index.html}log4j}} or its successor, {{{http://logback.qos.ch/}logback}}, to get the most of out of your logging.  EXPLAIN LOG4J CONFIG FILE?  
+
+	Before discussing the files under src/main/java, we need to take some time to discuss {{{app_structure.html}the application structure of a tapestry 5 webapp}}.

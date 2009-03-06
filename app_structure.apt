@@ -1,0 +1,137 @@
+Cliffs Notes
+
+	Tapestry applications consist of:
+
+		* pages
+
+		* components
+
+		* mixins
+
+		* services
+
+		* everything else
+
+	Tapestry extensively uses "Inversion of Control" (IOC) also known as "Dependency Injection" (DI) to manage page, component, mixin, and service dependencies.  Inversion of Control is essentially: "Don't call us, we'll call you".  Using "new XXX()" is out; letting the "container" provide the dependencies for you is "in".  Let's review the {{{appmodule.html}AppModule}}.
+
+		
+Tome
+
+* Tapestry 5 Web Application Architecture
+
+	Code for tapestry 5 web applications can basically be divided into approximately six parts:
+
+	* Pages - these are top-level "container" components, directly analogous to a normal html page, except they have dynamic content.  These always have a ".tml" template (more on this later).
+
+	* Components - components are self-contained pieces of code that affect rendering in some manner; they may or may not have a tml template, and may or may not result in additional markup being generated. Some components are simply "control" mechanisms (eg: if/else, looping constructs, etc.). 
+
+	* Mixins - like components, but never have a template.  Unlike components, these never "stand alone": they are always associated with a component.  Mixins are written to affect the behavior of existing components.
+
+	* Services - services generally house the "business logic" of your application.  Key actions such as looking up objects, e-mailing, etc. will be handled by services.  But services can also affect the request and response, and so can affect rendering.  Still, as a general rule, services don't directly produce markup; rather, they produce results that pages and components use to generate markup.
+
+	* "Domain Objects" - objects that represent the business model that you're using.  The pizzeria will be using objects that represent database tables here.
+
+	* Everything else
+
+	The pieces that tapestry is directly involved in are the services, pages, components, and mixins, which we will discuss in that order. In order to discuss services, however, we first need to talk about tapestry's "IOC" container, T5IOC. This is a key piece of technology for tapestry, and understanding IOC in general and T5IOC in particular are essential to successfully working with Tapestry 5. 
+
+* What is IOC?
+
+	IOC stands for "Inversion Of Control" and is a "design pattern" which just means that it is a particular way of writing software to solve certain problems. It is also called "Dependency Injection" (DI).  We won't get into all of the pros and cons of IOC/DI here; there's plenty written on that subject elsewhere.  So, what problem does IOC/DI solve? It solves the problem of hard-wiring concrete "dependencies" between classes.  Consider the following scendario.  You're writing an application which will be sold to numerous different customers.  The application requires authentication and authorization to access one or more parts of the application.  However, each of your customers is going to have a different scheme for authenticating those users.  One will be using basic http authentication.  Another will be using a relational database-backed mechanism.  Yet another will be using a directory service, like LDAP.  The requirements for your application are the same, but the implementations are different. Aha, you think, now is the perfect time for an interface! You'll write a "service" interface, defining the methods that any authentication and authorization method must have to work with your system.  This might look something like:
+
++----+
+/** 
+ * Interface for determining whether a user is authenticated.
+ */
+public interface Authenticator {
+  boolean isAuthenticated();
+}
++----+
+
+	Great! Now, anywhere that we need authentication information, we can just use our interface:
+
++----+
+public class MyGreatClass implements MyGreatService {
+
+  private Authenticator authenticator;
+
+  public void performSomeAction() {
+    if (!authenticator.isAuthenticated()) {
+		//do something like return, or throw an exception, or whatever.
+    } else {
+		//perform the action.
+    }  
+  }
+}
++----+
+
+
+	So far so good.  Except... we haven't instantiated authenticator.  In fact, we /can't/ instantiate the authenticator field because, very likely, the classes for authentication haven't been written by the respective clients yet!  We could provide a default authenticator:
+
++----+
+public class DefaultAuthenticator implements Authenticator {
+	public boolean isAuthenticated() {
+		return false;
+	}
+}
++----+
+
+	But if we simply do:
+
++----+
+	private Authenticator = new DefaultAuthenticator();
++----+
+
+	We still have a conundrum: how are the clients going to substitute their implementations in place of DefaultAuthenticator?  We might distribute the source code, and they can maintain their own fork of your code.  But that would required them to find all places where you instantiate an authenticator and replace DefaultAuthenticator with their implementation.  Plus it would require them to have access to the source, which may or may not be acceptable.  Not very pretty.  You could simplify the search/replace problem by implementing an "AuthenticatorFactory" that returns the appropriate authenticator.  Then clients just need to edit the factory file.  But this is java, and that still requires a recompile repackage, and is still ugly.  You could make your AuthenticatorFactory more flexible by making it look up the authenticator class to use at runtime, based on, say, a properties file.  Ah, now we're getting somewhere:
+
++----+
+public class AuthenticatorFactory {
+
+    public Authenticator buildAuthenticator() {
+		String authenticatorClass = readAuthenticatorClass();
+		return (Authenticator) Class.forName(authenticatorClass).newInstance();
+    }
+
+	private String readAuthenticatorClass() {
+		String className;
+		//some code to read the className from the properties file.
+   		return className;
+	}
+}
++----+
+
+	Ah... much better. Right? Hm. What if the authenticator class supplied by the client should be a "singleton" (only one instance per application)? We could handle that with the factory, but... what if another client needs a per-thread implementation? What if the authenticator class doesn't have a no-argument constructor? What if these classes have dependencies of their own? This is where IOC steps in.  In fact, the AuthenticatorFactory that we've sketched above is functionally a "service locator": it finds and instantiates a service based on some runtime configuration information which other classes use.  At the heart of basically every IOC container is a service locator.  Except IOC containers provide sophisticated service locators that understand how to build objects with multiple dependencies.  The beauty of an IOC container (as opposed to a straight service locator) is the means by which you obtain a reference to your service.  Rather than ask a service locator for the service directly, you specify the dependencies your service needs either by the constructor parameters ("Constructor Injector"), by the fields in the class ("field injection"), or by getter/setter methods ("property" or "method" injection).  Suppose we're now using tapestry's IOC container.  This container typically uses "constructor injection", so dependencies are determined and handed to the service via the constructor.  Let's recode MyGreatClass that way:
+
++----+
+public class MyGreatClass implements MyGreatService {
+  
+	private final Authenticator authenticator;
+
+	public MyGreatClass(final Authenticator authenticator) {
+		this.authenticator = authenticator;
+	}
+
+	public void performSomeAction() {
+		if (!authenticator.isAuthenticated()) {
+			//do something like return, or throw an exception, or whatever.
+		} else {
+			//perform the action.
+		}  
+	}
+}
++----+
+
+	Now no dependencies are hardwired to MyGreatClass.  To get the benefits of DI, we also give up instantiating MyGreatClass. So if you have some other service that needs MyGreatClass, it would look like:
+
++---+
+public class MyOtherService {	
+
+	private final MyGreatService service;
+
+	public MyOtherService(final MyGreatService service) {
+		this.service = service;
+	}
+}
++----+
+
+	And MyOtherService would /also/ be instantiated by the IOC container.  Now, all of this may seem like a lot of work and abstraction for a simple application.  But when you start coding larger applications, it becomes incredibly useful.  And Tapestry's IOC container, combined with some of the core services provided by tapestry-core, also give you an enormous amount of flexibility, to allow you to override specific pieces of the framework to work in different ways.  Tapestry's IOC container also contains powerful mechanisms for extending existing services via "contributions", which we'll cover momentarily.  The above example leaves one question unanswered: how does the IOC container, generally, and T5IOC, specifically, know what class to instantiate and inject for the Authenticator?   We tell it, of course.  How you tell it depends on the IOC container.  For T5IOC, we tell it via code contained in "Module" classes.  For starters, let's {{{appmodule.html}explore the "AppModule"}}.  

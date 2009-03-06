@@ -1,0 +1,71 @@
+Tapestry5Cayenne Tutorial
+
+Introduction
+
+	Tapestry 5 is a java-based framework for building web applications like the {{{http://www.ruby-lang.org/en/}ruby}}-based {{{http://rubyonrails.org}RoR}} or the java-based {{{http://struts.apache.org/}struts}}.  Cayenne is a java-based tool for mapping database tables to java objects, like the ruby-based {{{http://ar.rubyonrails.com/}ActiveRecord}} or the java-based {{{http://hibernate.org}hibernate}}.  Tapestry5Cayenne (t5cayenne) is a project which integrates the two projects to allow for rapid prototyping and development of complex database-backed web applications.  The goal of this tutorial is to highlight how T5Cayenne integrates the two technologies by developing an application from scratch.  
+
+Assumptions
+
+	* You are familiar with java >= 1.5, 
+
+	* You have {{{http://maven.apache.org}maven}} (>=2.0.9) installed (or that you are capable of installing software)
+
+	* You are at least somewhat comfortable with executing commands from a command line.  
+
+	* Familiar with HTML
+
+	* No java-based web development experience
+
+	* No tapestry experience
+
+	* No cayenne experience
+
+  I do NOT assume you are using any particular {{{http://en.wikipedia.org/wiki/Integrated_development_environment}IDE}}.  Most of the tutorial will ignore IDE's completely.  I will be focusing on the development of the code in question and the processes, rather than "how to do X in your IDE".  
+
+Our Application
+
+	Congratulations! You just won a contract for building a web presence for a local pizzeria.  The application has the following requirements:
+
+	* Customers should be able to order pizzas online
+
+		* Ordering should have a Drag and Drop interface for putting toppings onto custom-ordered pizzas
+		
+			* Should be able to apply a topping to only 1/2 of the pizza
+
+	* Customers should be able to "login"
+
+	* Ordering should allow but not require login
+
+	* Ordering when logged in should save the pizza order for future reference
+
+	* Ordering when logged-in should allow the user to duplicate a previously saved order
+
+	* Payment and shipping information should be "saveable" "auto-filled" when logged-in
+
+	* There should be two different account types: "customer" and "store".
+
+	* The "store"-type accounts should have a view of all pending pizza orders and their current status
+
+		* Status may be "ordered", "assembled", "baked", "in-delivery", or "delivered".
+	
+		* There should be a simple way to update the status to the next step.
+
+		* It should be possible to see all pizzas within a particular sub-category (all delievered pizzas, all baked pizzas, etc.)
+
+		* It should be possible to filter the sub-category based on other criteria, as well.
+
+  Being the erudite developer that you are, you built your proposal around excellent tools and technology to enable you to rapidly build and deploy this application.  Namely, you've chosen tapestry 5 for the web layer and cayenne 3 for the database layer, using t5cayenne as a bridge between the two technologies.  To build your project, you're using apache's "maven" project.  Let's see how this is going to pan out.  
+
+	* We'll create a template project using tapestry's "quick start" maven archetype
+
+	* We'll spend a bit of time getting the "look and feel" right
+
+		* We'll cover the basics of components
+
+		* We'll explore different ways of customizing the layout 
+
+	* We'll create our data model/database layer 
+
+	* We'll flesh out the application, using facilities provided by t5cayenne to make our job easier.
+
+  Along the way, I'll explain what's happening at each step, what the code means, and general principles of tapestry and cayenne.  The explanation will come in two flavors: "cliff notes" and "unabridged".  So if you already know what's going on at a particular step, you can move on quickly, but if you need more detail, it's there for you.  So let's {{{create_project.html}get started!}}.

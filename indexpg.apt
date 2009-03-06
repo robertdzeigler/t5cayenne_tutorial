@@ -1,0 +1,106 @@
+Cliffs Notes
+
+	* Tapestry web interfaces consist of "components" and "pages".  
+
+	* Pages consist of a template file and a java class with the same base name (Index.tml and Index.java).
+
+	* Templates must include the tapestry namespace declaration: xmlns:t="http://tapestry.apache.org/schema/tapestry_5_0_0.xsd" in the root element.
+
+	* Templates may contain:
+
+		* xhtml
+
+		* Expansions: $\{foo\} where "foo" is a property in the page class
+
+		* Component declarations
+
+			* Components allow for reusable UI code and may allow "parameters" which modulate the component's behavior at runtime.
+
+    {{{runjetty.html}Run the application}}
+
+Tome
+
+* Quickstart Index Page
+
+	Tapestry web interfaces are composed of xhtml, "components", and "pages".  Pages are "top-level components".  The quickstart generates an index page for us, which will be the page served by default when we run the application.  .  A tapestry page consists of:
+
+		* An xhtml-based template
+
+		* A java class
+
+		* (optional) locale-specific properties files for offering a locale-specific views of the page.
+
+	Let's start with the Index page's template.  A page template may be stored in
+
+		* src/main/webapp
+
+		* src/main/resources/tapestry.app-package/pages
+
+	A page's java class is always located at src/main/resource/tapestry.app-package/pages.  Here, tapestry.app-package refers to the configuration value set in "web.xml".  For the pizzeria, this is com.googlecode.tapestry5cayenne.  So  we have:
+
+		* src/main/webapp - location for templates
+
+		* src/main/resources/com/googlecode/tapestry5cayenne/pages - alternate location for templates
+
+		* src/main/java/com/googlecode/tapestry5cayenne/pages - location for page classes.
+
+	Whether you store your page templates in the webapp directory or in the resources location is generally a matter of preference and style.  However, 3rd party module developers always put them in the src/main/resources location.  For an application, it often makes sense to have them in src/main/webapp since that will become the root directory of the web application; the templates are more easily accessible, and thus modifiable, in that location.  The Index page follows this paradigm.  The template file is stored in src/main/webapp.  Let's take a look.
+
+** Index.tml
+
+	All templates have an extension of "tml", which stands for "tapestry markup language".  So, what /is/ tml? It's basically xhtml, with a few xml namespace-based extensions.  That means that tapestry templates are 100% valid xml.  It also means that all of the caveats associated with xml documents are likewise associated with tapestry templates.  The template serves as the page skeleton, providing the structure of the page, static content, and the "placeholders" for dynamic content.  Let's have a look!
+
++----+
+<html xmlns:t="http://tapestry.apache.org/schema/tapestry_5_0_0.xsd">
+    <head>
+        <title>pizzeria Start Page</title>
+    </head>
+    <body>
+        <h1>pizzeria Start Page</h1>
+
+        <p> This is the start page for this application, a good place to start your modifications.
+            Just to prove this is live: </p>
+
+        <p> The current time is: ${currentTime}. </p>
+
+
+        <p>
+            [<t:pagelink t:page="Index">refresh</t:pagelink>]
+        </p>
+    </body>
+</html>
++----+
+
+	The first line contains the xml "root element"; all xml documents must have a single "top-level" element, and .tml files are no different.  In this case, we make "html" be the root element, since this is an html page, after all.  xmlns:t defines the namespace that tapestry will use for its custom elements.  The "t" could just as well be "tap" or whatever you want, but "t" is customary. The important part is the xsd file pointed to.  You MUST include this definition in every .tml file, or tapestry will not recognize your file as a template file.  
+
+	Most of the rest of this template is ordinary xhtml.  We declare a head, title, and body, with a header and a couiple of paragraphs.  Let's jump to the next tapestry-specific part:
+
+
++----+
+<p> The current time is: ${currentTime}. </p>
++----+
+
+	This is ordinary xhtml, except for $\{currentTime\}.  This is an example of an "expansion", or a property reference, similar to ant properties, velocity properties, and so forth.  The text within $\{\} is a java-beans property path, the first portion of which refers to a property within the page class (src/main/java/com/googlecode/tapestry5cayenne/pages/Index.java):
+
++----+
+	public Date getCurrentTime() 
+	{ 
+		return new Date(); 
+	}
++----+
+
+	Tapestry will replace $\{currentTime\} with the string version of the value returned by the "currentTime" property (getCurrentTime method evaluation). Let's look at the final bit:
+
++----+
+[<t:pagelink t:page="Index">refresh</t:pagelink>]
++----+
+
+	This is an example of a "component".  Components are reusable bits of code and (possibly) templates that provide useful functionality.  Here we are using the "pagelink" component, which generates a link to a tapestry page. Components can be declared in the template by using <t:componenttype>.  Alternatively, they maybe declared like:
+
++----+
+<a t:type="pagelink" t:page="Index">refresh</t:pagelink>
++----+
+
+	It's the same to tapestry, but the latter form has the advantage of being "previewable": the template markup reflects what the component is doing.  Still, it boils down to personal preference.  This exmaple also illustrates the use of component parameters.  Most components require use-specific information.  For instance, the "pagelink" component can't read your mind; you have to tell it what page you want to link to.  Component parameters are the way this communication takes place.  They are akin to method parameters, except that the information transfer can be two-way: a component can "push" data back to the page or component that uses it via the parameter.  In the case of "pagelink", the parameter is "page" and we "bind" a value to that parameter, the literal value "Index".  That is what "t:page="Index" is doing.  
+
+	Now that we've stepped through the quickstart-generated files, let's {{{runjetty.html}run it}}!

@@ -1,0 +1,54 @@
+Cliffs Notes
+
+Tome
+
+	The typical approach to customizing the look and feel of an application in tapestry, and to ensure a consistent feel across pages, is to create a "Layout" component.  There is nothing special about this component; it's simply a component that is included by any page in the application which requires the application look and feel (note: the Tapestry 5.1 comes with a starter Layout component that you can use to be up and running quickly. We'll create our own here).  
+
+    As with tapestry pages, components have a backing "java class file".  Unlike pages, components may not have a template, but many do, and our Layout component does.  We put the java file in <app-package>.components.  In our case, that is com.googlecode.tapestry5cayenne.components.  Since we're using maven to build the pizzeria project, the java source file will go in $PIZZERIA_HOME/src/main/java/com/googlecode/tapestry5cayenne/components/ (for unix-like machines).  The name of our component will be "Layout", and so we'll name the java file accordingly.  From the command-line on a unix-like machine (using the vim text editor), this looks like (starting from the project root folder):
+
++----+
+cd src/main/java/com/googlecode/tapestry5cayenne/
+mkdir components
+cd components
+vim Layout.java
++----+
+
+    We'll add the basic class and package definitions to our .java file, so now it looks like:
+
++----+
+package com.googlecode.tapestry5cayenne.components;
+
+public class Layout {
+
+}
++----+
+
+    And that's it.  Technically, that java file is now a component. Certainly not a useful component.  But it is a component.  Let's make our component more useful by adding a template.  This belongs in src/main/resources/com/googlecode/tapestry5cayenne/components.  Ie, the same package as the .java file, but in the "resources" subdirectory of the src/main folder.  In reality, a page is just a top-level component with a mandatory template (and in a different package), so nearly everything we've learned so far about pages still applies.  Namely:
+
+      * Template files end in .tml
+
+      * Must be valid xml (ie xhtml)
+
+      * Root element must contain the "http://tapestry.apache.org/schema/tapestry_5_0_0.xsd" namespace declaration.
+
+      * May use expansions: $\{foo\}
+
+      * May contain references to other components.
+
+  Differences between pages and components include:
+
+      * Component templates must be in the same package as the component and may not reside in the application context folder.
+
+      * Pages require a template, but components do not
+
+      * Pages can't be "embedded" in other pages or components the way components can. Ie, they are always the top level of the static structure.
+
+   So, now: src/main/resource/com/googlecode/tapestry5cayenne/components/Layout.tml looks like: 
+
++----+
+<html xmlns:t="http://tapestry.apache.org/schema/tapestry_5_0_0.xsd">
+
+</html>
++----+
+
+    Not very exciting. But it'll get better. First, let's edit the index page to use our component.  We're going to do that by changing the root element to be our layout component, and removing the head and body tags from the page.

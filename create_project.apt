@@ -1,0 +1,262 @@
+Cliffs Notes
+
+  From the command line:
+
++----+
+mvn archetype:create -DarchetypeGroupId=org.apache.tapestry -DarchetypeArtifactId=quickstart -DarchetypeVersion=5.0.18 -DgroupId=com.googlecode.tapestry5cayenne -DartifactId=pizzeria -DartifactVersion=0.1
++----+
+
+	That command creates a skeleton pizzeria project with a {{{#pom.xml}build file}}.  The build file contains the dependency on tapestry-5.0.18. The directory structure is:
+
+	* src/main/java - application code
+	
+	* src/test/java - testing code
+
+	* src/main/webapp - "context root" of the application: servlet configuration files, static html files and more go here.
+
+	* src/main/resources - non-code application resources (html templates)
+
+	* src/test/resources - testing resources (sample input files, etc.)
+
+  {{{webappfiles.html}Explore webapp files}}.
+
+Tome
+
+* Creating the Pizzeria Project
+
+	We'll be using maven to manage our build process.  This isn't strictly necessary to work with tapestry or cayenne, but there are some maven-based tools that make it easier to get started quickly.  As stated in the introduction, I assume that you've already installed maven (>= version 2.0.9).  If you haven't, visit {{{http://maven.apache.org/download.html}the maven download page}} to download it. 
+
+	One maven concept is "archetypes" which are really just project templates.  Tapestry 5 provides such a project template, designed to setup a T5 application quickly and get you running.  Let's see how that works.  For this and any other maven commands, we'll be relying on command-line maven; feel free to substitute the maven/IDE integration method of your choice.  I'll show you the command and then walk through the meaning of each portion of the command and result. First, from the command line, navigate to the directory that will house your project.  I use a unix-based system, so for me, that might look like:
+
++----+
+cd Programming/java/projects
++----+
+
+	Now, from the command line, we enter:
+
++----+
+mvn archetype:create -DarchetypeGroupId=org.apache.tapestry -DarchetypeArtifactId=quickstart -DarchetypeVersion=5.0.18 -DgroupId=com.googlecode.tapestry5cayenne -DartifactId=pizzeria -DartifactVersion=0.1
++----+
+
+
+
+* Command Description
+
+	Maven has two overarching concepts: build "phases" (which will be useful later), and build "plugins".  In this case, we're taking advantage of the archetype:create plugin, which uses an "archetype" (template) for a project to create a new maven-based project.  Maven uses a "qualified project id".  This is just the project name, but has two parts: a "groupid" and an "artifact id".  The group id is used to qualify the artifact id.  The group id is normally the id of the organization that created the project and normally follows java package-naming conventions, and the artifact id is the specific project name.  So in the command above, -DarchetypeGroupId is specifying which organization's archetype to use, and the -DarchetypeArtifactId is specifying the name of the template within that organization to use to create the project.  The next option, -DarchetypVersion, specifies which version of the template to use.  We'll be using 5.0.18 for this project.  The first three options, then, determine the specific template to use to create our project, while the last three options contain information about our project, allowing us to specify the groupId for our project, the name of the project (-DartifactId), and the project version (0.1).  
+
+* Project Structure
+
+	Having entered the previous command, you should now be able to see the following directories and files (directories are noted with a trailing /).
+
+	* pizzeria/
+
+		* pom.xml
+
+		* src/
+
+			* main/
+
+				* java/
+
+					* com/
+
+						* googlecode/
+
+							* tapestry5cayenne/
+
+								* pages/
+
+									* Index.java
+
+								* services/
+
+									* AppModule.java
+
+				* resources/
+
+					* log4j.properties
+
+				* webapp/
+
+					* Index.tml
+
+					* WEB-INF/
+
+						* app.properties
+
+						* web.xml
+
+					* favicon.ico
+
+			* test/
+
+				* java/
+
+					* PLACEHOLDER
+
+				* resources/
+
+					* PLACEHOLDER
+
+
+  Maven likes a deep directory structure.  Here's the breakdown: pom.xml is the "project object model" file which is your build file.  It's an xml file that describes the pieces of your project, or, in maven speak, your module: what is the module's name, it's group, it's version, who are the developers, what other modules does this module rely on (dependencies), how should the module be packaged, and more are or can be described in this file.  Maven also understands the notion of "pom inheritence": you can specify things relating to many modules in one pom, and "inherit" from that pom for your modules.  In fact, every pom implicitly inherits from the maven-defined "super pom", which provides defaults for many projects, allowing simple projects to be built with only a few lines of xml.  The flipside of this inheritence is that it can make build files tricky to understand.  The particular xml used by maven is also extremely verbose, so overriding values is more painful than necessary, but still manageable.  
+
+	Alongside the pom.xml is the "src" directory.  This is the directory in which all things "source" (not just java code files) reside.  Once we actually build the project, we'll see maven create a "target" directory as well, which is where the intermediate and final build artifacts (.class files, wars, jars, etc.) are assembled.  
+
+	Beneath src is main and test.  Maven likes us to keep our test-related files separate from the application files.  This may take some getting used to at first, but is actually quite nice: we can mirror our package structure and have test files which can, for example, access package-private methods, while still keeping a clean separation of the testing code and files from the application code and files, so someone perusing our project can examine the important application files without being distracted by testing material.  
+
+	Both "main" and "test" directories contain "java" and "resources" directories.  Java is where code belongs and resources is where non-java resources (images, configuration files, etc.) belong.  The "main" directory also contains a "webapp" directory.  We are creating a web application, after all.  By default, maven expects a "src/main/webapp" directory for webapplications.  webapp reflects the root of the web application.  Let's step through the files generated by this archetype individually and describe what is going on in each of them.
+
+* {pom.xml}
+
+	As mentioned, this is the "build file".  Let's take a peak inside.  We'll walk through the file line-by-line so we can understand all of it.  If you're already initimately aquainted with the guts of maven pom files, feel free to skim to the most important points: the dependencies and packaging.
+
+** Project Meta Data
+
++----+
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.googlecode.tapestry5cayenne</groupId>
+    <artifactId>pizzeria</artifactId>
+    <version>0.0.1</version>
+    <packaging>war</packaging>
+    <name>pizzeria Tapestry 5 Application</name>
++----+
+
+	In this first section, the pom has declared the top-level element (project), the schema, and the xml name spaces used (line 1).  The next line "modelVersion" states what version of the maven pom this is.  For maven 2.0.x, this is always 4.0.0.  Then we have various declarations about our project: the groupId, artifactId, and version (specificed previously).  Then there is the packaging: this tells maven how we want our module/project packaged: we want this packaged as a war file (the default packaging is jar).  Finally, we have the "user friendly" name of the project.  
+
+** Project Dependencies
+
++----+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.tapestry</groupId>
+            <artifactId>tapestry-core</artifactId>
+            <version>${tapestry-release-version}</version>
+        </dependency>
+
+        <!-- A dependency on either JUnit or TestNG is required, or the surefire plugin (which runs the tests)
+will fail, preventing Maven from packaging the WAR. Tapestry includes a large number
+of testing facilities designed for use with TestNG (http://testng.org/), so it's recommended. -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>5.1</version>
+            <classifier>jdk15</classifier>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
++----+
+
+	This next section contains the "dependencies" of our project.  These are other modules/projects that our module uses.  The tapestry quickstart archetype has added two dependencies for us: tapestry-core (version: $\{tapestry-release-version\}, more on that in a moment) and testng, version 5.1.  The "tapestry-core" module provides the core pieces of tapestry web application framework, version 5 and "testng" is a framework used for testing applications.  As mentioned in the tapestry-mentioned comment, tapestry uses testng internally and therefore has many facilities for testing tapestry webapplications using testng.  Each dependency declares the group and artifact ids of the dependency as well as the version.  The testng also contains the optional "classifier" and "scope" elements.  Classifier allows us to be more specific about which type of a dependency we are using.  For example, testng provides an annotations-based library as well as java4/non-annotations based library.  Since we'll be using java 5 or greater to build our application, we tell maven to use the java 5 version of the library.  The scope tells maven when we need the dependency.  The default scope is "compile" which means we need the dependency to compile our project.  "compile"-scoped dependencies are also passed on to other projects which depend on our project.  These dependencies will also be included in our war file.  There are 6 scopes available, and I recommend reading {{{http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html}maven's dependency guide}} for more detail. 
+	As mentioned, the version of the "tapestry-core" dependency is "$\{tapestry-release-version\}".  This is an example of a build variable, or build property.  We can specify variables to use to keep things simple.  For example, all of the tapestry 5 modules use a consistent version number (currently 5.0.18), so you always know which version to use of a particular module.  Suppose we specify dependencies to other tapestry modules or plugins (and we will).  At some point, there will presumably be a 5.0.19 version of tapestry, or perhaps a 5.1.0 version, and we may want to upgrade.  Rather than having to change each version number separately, we can specify the version as a variable and change it in one place (which I'll show you later).
+
+** Build Plugins
+
++----+
+    <build>
+        <finalName>pizzeria</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                    <optimize>true</optimize>
+                </configuration>
+            </plugin>
+
+            <!-- Run the application using "mvn jetty:run" -->
+            <plugin>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>maven-jetty-plugin</artifactId>
+                <version>6.1.9</version>
+                <configuration>
+                    <!-- Log to the console. -->
+                    <requestLog implementation="org.mortbay.jetty.NCSARequestLog">
+                        <!-- This doesn't do anything for Jetty, but is a workaround for a Maven bug
+                             that prevents the requestLog from being set. -->
+                        <append>true</append>
+                    </requestLog>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
++----+
+
+	The "build" section contains specific details and overrides about how we want our project built.  A build is configured by configuring build "plugins" and associating them with different "phases" of a build (compiling, testing, packaging, distributing, etc.).  In this case, we're going to override the "finalName" property to just be pizzeria (instead of being something calculated from the <name> element listed in the beginning of the pom).  Next, we'll handle some plugins.  The maven-compliler-plugin is already setup by the "superpom", so our inclusion of it here is only necessary to allow us to override the configuration of the plugin.  By default, it compiles with a jdk1.4-compliant compiler.  Tapestry 5 requires 1.5 or higher, so we tell the compiler plugin to use source and target of 1.5.
+
+	The next "plugin" is not included by maven by default, so we're adding it.  That is the "jetty" plugin.  It allows us to run our application locally using the jetty servlet container.  We'll do that at the end of this section.  The jetty plugin requires the requestLog configuration item to tell it how to log information about the incomiong requests, so we configure that here.
+ 
+** Reporting Plugins
+
++----+
+    <reporting>
+
+        <!-- Adds a report detailing the components, mixins and base classes defined by this module. -->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.tapestry</groupId>
+                <artifactId>tapestry-component-report</artifactId>
+                <version>${tapestry-release-version}</version>
+                <configuration>
+                    <rootPackage>com.googlecode.tapestry5cayenne</rootPackage>
+                </configuration>
+            </plugin>
+        </plugins>
+    </reporting>
++----+
+
+	Maven includes many plugins for running reports, and that is what the "reporting" section is all about.  Here, we add a tapestry plugin for generating "component reports".  Compoenent reports take information from the javadocs and annotations of components to generate documentation on each component. You can see an example of the output at {{{http://tapestry.apache.org/tapestry5/tapestry-core/ref/index.html}Tapestry's component report}}.  The "rootPackage" configuration tells tapestry where to start looking for components (it will actually look in rootPackage/components, rootPackage/pages, and rootPackage/mixins for components, pages, and mixins, respectively.  We'll cover the specifics of those later).  Note that here, again, we're declaring the version of the component report to use in the form of the variable $\{tapestry-release-version\}.
+
+** Repositories
+
++----+
+    <repositories>
+        <!-- This can be commented out when the tapestry-release-version is a not a snapshot.
+ The non-snapshot Tapestry artifacts are distributed through the central
+ repository at ibiblio.     -->
+
+        <repository>
+            <id>tapestry-snapshots</id>
+            <url>http://tapestry.formos.com/maven-snapshot-repository/</url>
+        </repository>
+
+        <repository>
+            <id>codehaus.snapshots</id>
+            <url>http://snapshots.repository.codehaus.org</url>
+        </repository>
+        <repository>
+            <id>OpenQA_Release</id>
+            <name>OpenQA Release Repository</name>
+            <url>http://archiva.openqa.org/repository/releases/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <!-- As above, this can be commented out when access to the snapshot version
+of a Tapestry Maven plugin is not required.   -->
+        <pluginRepository>
+            <id>tapestry-snapshots</id>
+            <url>http://tapestry.formos.com/maven-snapshot-repository/</url>
+        </pluginRepository>
+
+
+    </pluginRepositories>
++----+
+
+	Here we specify the "repositories" needed by our application.  Maven includes the ability to automatically download needed dependencies and plugins.  To do this, it uses "repositories" where the modules are publically accessible in a maven-understood directory structure.  There is a "centralized" repository used by default.  But some plugins and modules have their own repository. Fortunately, maven lets us define additional locations to search for modules.  For instance, snapshots of tapestry sit in a repository on tapestry.formos.com, so if you're using a "snapshot" ("nightly build") version of tapestry, you need the tapestry-snapshots repository definition.  Codehause is a "maven sandbox" where many maven plugins reside which may eventually be included in the core maven distribution.  OpenQA is the provider of selenium, a web-testing framework.  A "repository" is the location of some "artifact" (module/project).  A "pluginRepository" is a repository where maven build plugins reside.
+	
+** Properties
+
++----+
+    <properties>
+        <tapestry-release-version>5.0.18</tapestry-release-version>
+    </properties>
+</project>
++----+
+
+	At long last, we reach the end of our build file, where we finallyd define the $\{tapestry-release-version\} variable, in the form of a build property.  There are many ways to define properties or build variables in maven (including the command line and property files), but this is the most straightforward way.
+
+	Now that we've broken down the build file, let's {{{webappfiles.html}move on to the other files}}.
