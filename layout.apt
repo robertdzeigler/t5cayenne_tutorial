@@ -27,6 +27,8 @@ public class Layout {
 
       * Template files end in .tml
 
+      * Case of the template file name and java class name MUST match (this is one place where tapestry is NOT case-insensitive).
+
       * Must be valid xml (ie xhtml)
 
       * Root element must contain the "http://tapestry.apache.org/schema/tapestry_5_0_0.xsd" namespace declaration.
@@ -52,3 +54,24 @@ public class Layout {
 +----+
 
     Not very exciting. But it'll get better. First, let's edit the index page to use our component.  We're going to do that by changing the root element to be our layout component, and removing the head and body tags from the page.
+
+With those changes, Index.tml now looks like:
+
++----+
+
++----+
+<html t:type="layout" xmlns:t="http://tapestry.apache.org/schema/tapestry_5_0_0.xsd">
+        <h1>pizzeria Start Page</h1>
+
+        <p> This is the start page for this application, a good place to start your modifications.
+            Just to prove this is live: </p>
+
+        <p> The current time is: ${currentTime}. </p>
+
+        <p>
+            [<t:pagelink t:page="Index">refresh</t:pagelink>]
+        </p>
+</html>
++----+
+
+    The key piece is the t:type="layout": we're telling tapestry that our root element (html) is actually an instance of the layout component. Also note that although our component is "Layout", we can reference in the template with "layout". Or "laYout". Or "LAYOUT" or "Layout".  That is, when referencing our component name within a template, tapestry is case-insensitive.
