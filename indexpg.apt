@@ -22,7 +22,7 @@ Tome
 
 * Quickstart Index Page
 
-	Tapestry web interfaces are composed of xhtml, "components", and "pages".  Pages are "top-level components".  The quickstart generates an index page for us, which will be the page served by default when we run the application.  .  A tapestry page consists of:
+	Tapestry web interfaces are composed of xhtml, "components", and "pages".  Pages are "top-level components".  The quickstart generates an index page for us, which will be the page served by default when we run the application.  A tapestry page consists of:
 
 		* An xhtml-based template
 
@@ -34,9 +34,9 @@ Tome
 
 		* src/main/webapp
 
-		* src/main/resources/tapestry.app-package/pages
+		* src/main/resources/${tapestry.app-package}/pages
 
-	A page's java class is always located at src/main/resource/tapestry.app-package/pages.  Here, tapestry.app-package refers to the configuration value set in "web.xml".  For the pizzeria, this is com.googlecode.tapestry5cayenne.  So  we have:
+	A page's java class is always located at src/main/resource/${tapestry.app-package}/pages.  Here, ${tapestry.app-package} refers to the configuration value set in "web.xml".  For the pizzeria, this is com.googlecode.tapestry5cayenne.  So  we have:
 
 		* src/main/webapp - location for templates
 
